@@ -1,2 +1,5 @@
 # gavinrolls.github.io
-Personal Website
+
+layout: page
+title: "Gavin Rolls"
+permalink: /home
