@@ -124,6 +124,17 @@
 				instagram.addEventListener("click",function(){
 					window.location.assign('https://www.instagram.com/gavinrolls/?hl=en')
                 }, false);
+
+				var rollsTour = svgDoc.getElementById("rollsTour");
+				rollsTour.addEventListener("mouseover",function(){
+					rollsTour.setAttributeNS(null, "r", 30);
+				}, false);
+				rollsTour.addEventListener("mouseout",function(){
+					rollsTour.setAttributeNS(null, "r", 20);
+				}, false);
+				rollsTour.addEventListener("click",function(){
+					window.location.assign('https://rollseurotour.substack.com')
+                }, false);
             }, false);
 		</script>
 	</div>
