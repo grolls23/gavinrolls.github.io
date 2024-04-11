@@ -90,6 +90,30 @@
 				megaregions.addEventListener("click",function(){
 					window.location.assign('https://doi.org/10.1080/12265934.2023.2189156')
                 }, false);
+
+				var londonunderground = svgDoc.getElementById("londonunderground");
+				londonunderground.style.cursor = 'pointer';
+				londonunderground.addEventListener("mouseover",function(){
+					londonunderground.setAttributeNS(null, "r", 30);
+				}, false);
+				londonunderground.addEventListener("mouseout",function(){
+					londonunderground.setAttributeNS(null, "r", 20);
+				}, false);
+				londonunderground.addEventListener("click",function(){
+					window.location.assign('londonunderground.html')
+                }, false);
+
+				var learningdiary = svgDoc.getElementById("learningdiary");
+				learningdiary.style.cursor = 'pointer';
+				learningdiary.addEventListener("mouseover",function(){
+					learningdiary.setAttributeNS(null, "r", 30);
+				}, false);
+				learningdiary.addEventListener("mouseout",function(){
+					learningdiary.setAttributeNS(null, "r", 20);
+				}, false);
+				learningdiary.addEventListener("click",function(){
+					window.location.assign('https://grolls23.github.io/LearningDiary/')
+                }, false);
 			}, false);
 		</script>
 		<object
