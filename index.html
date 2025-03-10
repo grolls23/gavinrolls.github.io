@@ -91,6 +91,18 @@
 					window.location.assign('https://doi.org/10.1080/12265934.2023.2189156')
                 }, false);
 
+				var remotesensing = svgDoc.getElementById("remotesensing");
+				remotesensing.style.cursor = 'pointer';
+				remotesensing.addEventListener("mouseover",function(){
+					remotesensing.setAttributeNS(null, "r", 30);
+				}, false);
+				remotesensing.addEventListener("mouseout",function(){
+					remotesensing.setAttributeNS(null, "r", 20);
+				}, false);
+				remotesensing.addEventListener("click",function(){
+					window.location.assign('https://doi.org/10.1017/dap.2025.7')
+                }, false);
+
 				var londonunderground = svgDoc.getElementById("londonunderground");
 				londonunderground.style.cursor = 'pointer';
 				londonunderground.addEventListener("mouseover",function(){
