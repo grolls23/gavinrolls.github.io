@@ -59,9 +59,9 @@
 
 .projects {
     padding-top: 20px;
-    margin-left: auto;
+    margin-left: calc((100% - 600px) / 2);
     margin-right: auto;
-    display:block;
+    display: block;
 }
 
 .fun {
