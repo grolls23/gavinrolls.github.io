@@ -45,6 +45,20 @@
   .popup iframe { width: 100%; height: 190px; border: 0; border-radius: 6px; }
   .leaflet-popup-content { width: 260px !important; }
   .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; font-family: "Futura", "Jost", sans-serif; }
+  .popup .map-link {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 6px 11px;
+    background: #1a73e8;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+  .popup .map-link:hover {
+    background: #1557b0;
+  }
   #toggle { display: none; }
   #status { color: #c0392b; font-size: 13px; margin-top: 10px; }
   @media (max-width: 720px) {
@@ -123,14 +137,34 @@ function embedSrc(raw) {
 /* ---------- State ---------- */
 let rows = [], colourFor = {}, activeCuisines = new Set(), visitedMode = "all", recMode = "all", showLabels = true, query = "";
 const layer = L.layerGroup().addTo(map);
+// Extracts a safe https URL from either a bare link or an <iframe src="..."> snippet
+    function extractMapUrl(raw) {
+  raw = String(raw ?? "").trim();
+  if (!raw) return "";
+  const m = raw.match(/src\s*=\s*["']([^"']+)["']/i);
+  const url = (m ? m[1] : raw).replace(/&/g, "&");
+  return /^https:\/\/(www\.)?(google\.[a-z.]+\/maps\/|maps\.app\.goo\.gl\/|goo\.gl\/maps\/)/i.test(url) ? url : "";
+}
 
 function buildPopup(r) {
-  const src = embedSrc(r.google_embed);
-  const meta = [r.category_cuisine, r.visited ? "Visited" + (r.first_visit_date ? " · " + r.first_visit_date : "") : "Not visited yet", r.recommend ? "\u2605 Recommended" : ""]
-    .filter(Boolean).map(esc).join(" · ");
-  return `<div class="popup"><h3>${esc(r.rest_name)}</h3><div class="meta">${meta}</div>` +
-    (src ? `<iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen src="${esc(src)}"></iframe>` : "") +
-    `</div>`;
+  const raw = String(r.google_embed ?? "").trim();
+  const url = extractMapUrl(raw);
+  const isEmbed = /<iframe/i.test(raw) || /\/maps\/embed/i.test(url);
+
+  const meta = [
+    r.category_cuisine,
+    r.visited ? "Visited" + (r.first_visit_date ? " · " + r.first_visit_date : "") : "Not visited yet",
+    r.recommend ? "\u2605 Recommended" : ""
+  ].filter(Boolean).map(esc).join(" · ");
+
+  let media = "";
+  if (url && isEmbed) {
+    media = `<iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen src="${esc(url)}"></iframe>`;
+  } else if (url) {
+    media = `<a class="map-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>`;
+  }
+
+  return `<div class="popup"><h3>${esc(r.rest_name)}</h3><div class="meta">${meta}</div>${media}</div>`;
 }
 
 function labelHtml(r) {
@@ -149,18 +183,35 @@ function render() {
   );
   shown.forEach(r => {
     const c = colourFor[r.category_cuisine];
-    if (r.recommend) {   // gold ring sits underneath the pin
+    if (r.recommend) { 
       L.circleMarker([r.lat, r.long], {
         radius: 12.5, color: "#b8860b", weight: 1, fillColor: "#ffc107", fillOpacity: 1, interactive: false
       }).addTo(layer);
     }
-    L.circleMarker([r.lat, r.long], {
+    const marker = L.circleMarker([r.lat, r.long], {
       radius: 8, color: c, weight: 3, fillColor: r.visited ? c : "#ffffff", fillOpacity: r.visited ? 0.9 : 1
-    }).bindPopup(() => buildPopup(r), { maxWidth: 280 })
+    }).bindPopup(() => buildPopup(r), { maxWidth: 280, autoPan: false })
       .bindTooltip(labelHtml(r), {
         permanent: showLabels, direction: "right", offset: [r.recommend ? 15 : 11, -12], className: "pin-label"
       })
       .addTo(layer);
+
+    let closeTimer;
+    const cancelClose = () => clearTimeout(closeTimer);
+    const scheduleClose = () => {
+      closeTimer = setTimeout(() => marker.closePopup(), 250);
+    };
+
+    marker.on("mouseover", () => {
+      cancelClose();
+      marker.openPopup();
+      const popupEl = marker.getPopup()?.getElement();
+      if (popupEl) {
+        popupEl.addEventListener("mouseenter", cancelClose);
+        popupEl.addEventListener("mouseleave", scheduleClose);
+      }
+    });
+    marker.on("mouseout", scheduleClose);
   });
   document.getElementById("count").textContent = `${shown.length} of ${rows.length} places`;
   document.querySelectorAll("#legend .item").forEach(el => {
