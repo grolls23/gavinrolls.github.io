@@ -35,7 +35,7 @@
   .key { font-size: 12px; color: var(--muted); margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
   .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 12px; cursor: pointer; }
   .filter-label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 5px; }
-  .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; }
+  .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; font-family: "Futura", "Jost", sans-serif; }
   .leaflet-tooltip.pin-label::before { display: none; }
   .pin-label .d { color: #666; font-size: 10px; display: block; }
   .key span { display: inline-flex; align-items: center; gap: 5px; }
@@ -44,7 +44,6 @@
   .popup .meta { font-size: 13px; color: #555; margin-bottom: 8px; }
   .popup iframe { width: 100%; height: 190px; border: 0; border-radius: 6px; }
   .leaflet-popup-content { width: 260px !important; }
-  .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; font-family: "Futura", "Jost", sans-serif; }
   .popup .map-link {
     display: inline-block;
     margin-top: 4px;
@@ -167,6 +166,31 @@ function buildPopup(r) {
   return `<div class="popup"><h3>${esc(r.rest_name)}</h3><div class="meta">${meta}</div>${media}</div>`;
 }
 
+// Month convert helper
+const MONTHS_EN_GB = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function formatVisitDate(raw) {
+  const str = String(raw ?? "").trim();
+  if (!str) return "";
+  const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const monthIndex = parseInt(m[2], 10) - 1;
+    let year = parseInt(m[3], 10);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+
+    if (monthIndex >= 0 && monthIndex < 12 && day >= 1 && day <= 31) {
+      return `${day} ${MONTHS_EN_GB[monthIndex]} ${year}`;
+    }
+  }
+
+  // Fallback: if the sheet already has text like "3 April 2026", return it as-is
+  return str;
+}
+
 function labelHtml(r) {
   return "<b>" + esc(r.rest_name) + "</b>" +
     (r.visited && r.first_visit_date ? '<span class="d">' + esc(r.first_visit_date) + "</span>" : "");
@@ -244,7 +268,7 @@ function parseRows(data) {
     rest_name: (d.rest_name || "").trim(),
     category_cuisine: (d.category_cuisine || "Uncategorised").trim() || "Uncategorised",
     visited: isYes(d.visited),
-    first_visit_date: (d.first_visit_date || "").trim(),
+    first_visit_date: formatVisitDate(d.first_visit_date),
     google_embed: d.google_embed || "",
     recommend: isYes(d.recommend ?? d.reccomend ?? d.recommended ?? d.recommendation),
     lat: parseFloat(d.lat),
