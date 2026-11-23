@@ -15,8 +15,9 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
   #app { display: flex; height: 100%; }
-  #panel { width: var(--panel-w); flex: none; padding: 16px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg); z-index: 1000; }
+ #panel { width: var(--panel-w); flex: none; padding: 16px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg); z-index: 1000; }
   #map { flex: 1; min-width: 0; }
+  h1, h2 { font-family: "Futura", "Jost", sans-serif; }
   h1 { font-size: 18px; margin: 0 0 2px; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
   input[type=search], select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); font-size: 14px; margin-bottom: 10px; }
@@ -43,6 +44,7 @@
   .popup .meta { font-size: 13px; color: #555; margin-bottom: 8px; }
   .popup iframe { width: 100%; height: 190px; border: 0; border-radius: 6px; }
   .leaflet-popup-content { width: 260px !important; }
+  .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; font-family: "Futura", "Jost", sans-serif; }
   #toggle { display: none; }
   #status { color: #c0392b; font-size: 13px; margin-top: 10px; }
   @media (max-width: 720px) {
