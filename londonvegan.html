@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>London Vegan</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1c1e; --muted: #6b6b70; --line: #e3e3e6; --panel-w: 300px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1e21; --fg: #f1f1f3; --muted: #9a9aa2; --line: #34353a; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+  #app { display: flex; height: 100%; }
+  #panel { width: var(--panel-w); flex: none; padding: 16px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg); z-index: 1000; }
+  #map { flex: 1; min-width: 0; }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  input[type=search], select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); font-size: 14px; margin-bottom: 10px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+  .seg button { flex: 1; padding: 7px 4px; border: 0; background: transparent; color: var(--fg); font-size: 13px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--fg); color: var(--bg); }
+  .legend-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 4px 0 6px; }
+  .legend-head a { text-transform: none; letter-spacing: 0; cursor: pointer; text-decoration: underline; }
+  .item { display: flex; align-items: center; gap: 9px; padding: 5px 4px; border-radius: 6px; cursor: pointer; font-size: 14px; user-select: none; }
+  .item:hover { background: rgba(127,127,127,.12); }
+  .item.off { opacity: .35; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .item .n { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .key { font-size: 12px; color: var(--muted); margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 12px; cursor: pointer; }
+  .filter-label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 5px; }
+  .leaflet-tooltip.pin-label { background: rgba(255,255,255,.93); color: #1c1c1e; border: 1px solid rgba(0,0,0,.18); box-shadow: none; padding: 1px 5px; font-size: 11px; line-height: 1.25; }
+  .leaflet-tooltip.pin-label::before { display: none; }
+  .pin-label .d { color: #666; font-size: 10px; display: block; }
+  .key span { display: inline-flex; align-items: center; gap: 5px; }
+  .key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .popup h3 { margin: 0 0 4px; font-size: 16px; }
+  .popup .meta { font-size: 13px; color: #555; margin-bottom: 8px; }
+  .popup iframe { width: 100%; height: 190px; border: 0; border-radius: 6px; }
+  .leaflet-popup-content { width: 260px !important; }
+  #toggle { display: none; }
+  #status { color: #c0392b; font-size: 13px; margin-top: 10px; }
+  @media (max-width: 720px) {
+    #app { flex-direction: column-reverse; }
+    #panel { width: 100%; max-height: 42%; border-right: 0; border-top: 1px solid var(--line); }
+    #map { min-height: 58%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <h2>Margo and Gavin's</h1>
+    <h2>Guide to London Vegan</h2>
+    <div class="sub"><span id="count">Loading…</span></div>
+    <input type="search" id="search" placeholder="Search name or cuisine…">
+    <label class="chk"><input type="checkbox" id="labels" checked> Show labels</label>
+    <div class="filter-label">Status</div>
+    <div class="seg" id="visitedFilter">
+      <button data-v="all" class="on">All</button>
+      <button data-v="yes">Visited</button>
+      <button data-v="no">Want to Visit</button>
+    </div>
+    <div class="filter-label">Recommended</div>
+    <div class="seg" id="recFilter">
+      <button data-v="all" class="on">All</button>
+      <button data-v="yes">&#9733; Recommended only</button>
+    </div>
+    <div class="legend-head"><span>Cuisine</span><span><a id="all">all</a> · <a id="none">none</a></span></div>
+    <div id="legend"></div>
+    <div class="key">
+      <span><i style="background:#888"></i> visited</span>
+      <span><i style="background:#fff;border:2px solid #888"></i> not yet</span>
+      <span><i style="background:#888;box-shadow:0 0 0 2px #ffc107"></i> recommended</span>
+    </div>
+    <div id="status"></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+/* ---------- Config ---------- */
+// Live source: your sheet, published to the web as CSV.
+const LIVE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIGETv0Cc3-WOi50IsfUBpHiWiErdLkosd9cXcUjfcE3X6vOM0UiuZxxyVyZgyAIRlNyAGmi8cVkdf/pub?gid=0&single=true&output=csv";
+const CARTO_KEY = "cb1_5eo1_1_097423fd45f47f088670273f";
+const MAP_CENTER = [51.5074, -0.1278];      // London
+const MAP_ZOOM = 11;
+const PALETTE = [
+  "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#00a5b5",
+  "#d4a017", "#f032e6", "#7a9a01", "#9a6324", "#008080", "#e08fa0",
+  "#800000", "#5c6bc0", "#2e8b57", "#555555"
+];
+
+/* ---------- Map ---------- */
+const map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
+L.tileLayer("https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=" + CARTO_KEY, {
+  maxNativeZoom: 18, maxZoom: 20,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+}).addTo(map);
+
+/* ---------- Helpers ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const isYes = v => /^(true|yes|y|1|x|✓|visited)$/i.test(String(v ?? "").trim());
+
+// Accepts a full <iframe ...> snippet or a bare URL; returns a safe https src or "".
+function embedSrc(raw) {
+  raw = String(raw ?? "").trim();
+  if (!raw) return "";
+  const m = raw.match(/src\s*=\s*["']([^"']+)["']/i);
+  const url = (m ? m[1] : raw).replace(/&amp;/g, "&");
+  return /^https:\/\/(www\.)?google\.[a-z.]+\/maps\//i.test(url) ? url : "";
+}
+
+/* ---------- State ---------- */
+let rows = [], colourFor = {}, activeCuisines = new Set(), visitedMode = "all", recMode = "all", showLabels = true, query = "";
+const layer = L.layerGroup().addTo(map);
+
+function buildPopup(r) {
+  const src = embedSrc(r.google_embed);
+  const meta = [r.category_cuisine, r.visited ? "Visited" + (r.first_visit_date ? " · " + r.first_visit_date : "") : "Not visited yet", r.recommend ? "\u2605 Recommended" : ""]
+    .filter(Boolean).map(esc).join(" · ");
+  return `<div class="popup"><h3>${esc(r.rest_name)}</h3><div class="meta">${meta}</div>` +
+    (src ? `<iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen src="${esc(src)}"></iframe>` : "") +
+    `</div>`;
+}
+
+function labelHtml(r) {
+  return "<b>" + esc(r.rest_name) + "</b>" +
+    (r.visited && r.first_visit_date ? '<span class="d">' + esc(r.first_visit_date) + "</span>" : "");
+}
+
+function render() {
+  layer.clearLayers();
+  const q = query.toLowerCase();
+  const shown = rows.filter(r =>
+    activeCuisines.has(r.category_cuisine) &&
+    (visitedMode === "all" || (visitedMode === "yes") === r.visited) &&
+    (recMode === "all" || r.recommend) &&
+    (!q || (r.rest_name + " " + r.category_cuisine).toLowerCase().includes(q))
+  );
+  shown.forEach(r => {
+    const c = colourFor[r.category_cuisine];
+    if (r.recommend) {   // gold ring sits underneath the pin
+      L.circleMarker([r.lat, r.long], {
+        radius: 12.5, color: "#b8860b", weight: 1, fillColor: "#ffc107", fillOpacity: 1, interactive: false
+      }).addTo(layer);
+    }
+    L.circleMarker([r.lat, r.long], {
+      radius: 8, color: c, weight: 3, fillColor: r.visited ? c : "#ffffff", fillOpacity: r.visited ? 0.9 : 1
+    }).bindPopup(() => buildPopup(r), { maxWidth: 280 })
+      .bindTooltip(labelHtml(r), {
+        permanent: showLabels, direction: "right", offset: [r.recommend ? 15 : 11, -12], className: "pin-label"
+      })
+      .addTo(layer);
+  });
+  document.getElementById("count").textContent = `${shown.length} of ${rows.length} places`;
+  document.querySelectorAll("#legend .item").forEach(el => {
+    el.classList.toggle("off", !activeCuisines.has(el.dataset.c));
+  });
+}
+
+function buildLegend() {
+  const counts = {};
+  rows.forEach(r => counts[r.category_cuisine] = (counts[r.category_cuisine] || 0) + 1);
+  const cuisines = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+  cuisines.forEach((c, i) => colourFor[c] = PALETTE[i % PALETTE.length]);
+  activeCuisines = new Set(cuisines);
+  const legend = document.getElementById("legend");
+  legend.innerHTML = cuisines.map(c =>
+    `<div class="item" data-c="${esc(c)}"><span class="dot" style="background:${colourFor[c]}"></span>${esc(c)}<span class="n">${counts[c]}</span></div>`
+  ).join("");
+  legend.querySelectorAll(".item").forEach(el => el.addEventListener("click", () => {
+    const c = el.dataset.c;
+    activeCuisines.has(c) ? activeCuisines.delete(c) : activeCuisines.add(c);
+    render();
+  }));
+  document.getElementById("all").onclick  = () => { activeCuisines = new Set(cuisines); render(); };
+  document.getElementById("none").onclick = () => { activeCuisines = new Set(); render(); };
+}
+
+/* ---------- Load ---------- */
+function parseRows(data) {
+  return data.map(d => ({
+    rest_name: (d.rest_name || "").trim(),
+    category_cuisine: (d.category_cuisine || "Uncategorised").trim() || "Uncategorised",
+    visited: isYes(d.visited),
+    first_visit_date: (d.first_visit_date || "").trim(),
+    google_embed: d.google_embed || "",
+    recommend: isYes(d.recommend ?? d.reccomend ?? d.recommended ?? d.recommendation),
+    lat: parseFloat(d.lat),
+    long: parseFloat(d.long)
+  })).filter(r => r.rest_name && Number.isFinite(r.lat) && Number.isFinite(r.long));
+}
+
+function fetchCsv(url) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(url, {
+      download: true, header: true, skipEmptyLines: true,
+      transformHeader: h => h.trim().toLowerCase(),
+      complete: res => {
+        const parsed = parseRows(res.data);
+        parsed.length ? resolve(parsed) : reject(new Error("no valid rows"));
+      },
+      error: reject
+    });
+  });
+}
+
+async function load() {
+  const status = document.getElementById("status");
+  try {
+    rows = await fetchCsv(LIVE_URL);
+  } catch (e) {
+    document.getElementById("count").textContent = "";
+    status.textContent = "Couldn't load the restaurant data. Please try again later.";
+    return;
+  }
+  buildLegend();
+  render();
+  map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.long])).pad(0.1));
+}
+load();
+
+/* ---------- Controls ---------- */
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+function bindSeg(id, onChange) {
+  const btns = document.querySelectorAll("#" + id + " button");
+  btns.forEach(b => b.addEventListener("click", () => {
+    btns.forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    onChange(b.dataset.v);
+  }));
+}
+bindSeg("visitedFilter", v => { visitedMode = v; render(); });
+bindSeg("recFilter", v => { recMode = v; render(); });
+document.getElementById("labels").addEventListener("change", e => { showLabels = e.target.checked; render(); });
+</script>
+</body>
+</html>
